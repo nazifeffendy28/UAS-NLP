@@ -16,9 +16,9 @@ Project ini disusun sebagai bagian dari penelitian akademik oleh:
 
 | Nama Mahasiswa | NIM | Peran |
 | :--- | :--- | :--- |
-| **Nazif Hamza Effendy** | 2411501527 | *Lead Developer & Researcher* |
+| **Nazif Hamza Effendy** | 2411501527 | *Developer & Researcher* |
 | **Shelly Ananda** | 2411500891 | *Data Analyst & Documentation* |
-| **Muhammad Richo Irsyad Faiz** | 2411500958 | *UI/UX Designer & Testing* |
+| **Muhammad Richo Irsyad Faiz** | 2411500958 | *Designer & Testing* |
 
 ---
 
