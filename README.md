@@ -64,6 +64,13 @@ Sistem tidak menelan mentah-mentah teks ulasan. Logika koreksi diterapkan:
 
 ---
 
+## Dataset
+Format CSV yang diharapkan aplikasi agar berjalan lancar:
+text: Isi review/ulasan pembeli.
+rating: Angka 1-5.
+category: Kategori produk (opsional, untuk filter).
+product_name: Nama barang (untuk fitur Top Produk).
+
 ## 📂 Struktur Project
 
 ```text
@@ -74,7 +81,9 @@ Sistem tidak menelan mentah-mentah teks ulasan. Logika koreksi diterapkan:
 │   └── tokopedia-reviews.csv  # Contoh dataset
 └── images/                 # Aset gambar (jika ada)
 
-Dataset
+---
+
+## Dataset
 Format CSV yang diharapkan aplikasi agar berjalan lancar:
 text: Isi review/ulasan pembeli.
 rating: Angka 1-5.
