@@ -13,13 +13,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-# ================== KONFIGURASI HALAMAN ==================
+# ================== PAGE CONFIG ==================
 st.set_page_config(
     page_title="Hybrid Sentiment Analysis Tokopedia",
     layout="wide"
 )
 
-# ================== LOAD STEMMER ==================
+# ================== HEADER ==================
+st.markdown(
+    """
+    <h1 style='text-align:center;'>🤖 Hybrid / Fusion Sentiment Analysis</h1>
+    <h4 style='text-align:center; color:gray;'>
+    Analisis Sentimen Ulasan Produk Fashion Tokopedia<br>
+    (Lexicon + Rating + Support Vector Machine)
+    </h4>
+    <hr>
+    """,
+    unsafe_allow_html=True
+)
+
+# ================== STEMMER ==================
 @st.cache_resource
 def load_stemmer():
     factory = StemmerFactory()
@@ -29,13 +42,13 @@ stemmer = load_stemmer()
 
 # ================== KAMUS SLANG ==================
 slang_dict = {
-    "yg": "yang", "ga": "tidak", "gak": "tidak", "tdk": "tidak",
-    "ak": "aku", "aq": "aku", "sy": "saya",
-    "bgt": "banget", "tp": "tapi", "klo": "kalau",
-    "mantul": "mantap", "ok": "oke", "dtg": "datang"
+    "yg":"yang","ga":"tidak","gak":"tidak","tdk":"tidak",
+    "ak":"aku","aq":"aku","sy":"saya",
+    "bgt":"banget","tp":"tapi","klo":"kalau",
+    "mantul":"mantap","ok":"oke","dtg":"datang"
 }
 
-# ================== LEXICON (PUNYA KAMU – TIDAK DIUBAH) ==================
+# ================== LEXICON (PUNYA KAMU) ==================
 positive_words = {
     "bagus","baik","cepat","rapi","aman","sesuai","mantap","puas",
     "oke","keren","nyaman","suka","awet","murah","ramah","lengkap",
@@ -82,7 +95,7 @@ def lexicon_sentiment(text):
     else:
         return "Netral"
 
-# ================== HYBRID / FUSION LOGIC ==================
+# ================== HYBRID / FUSION ==================
 def hybrid_sentiment(text_sentiment, rating):
     try:
         r = int(rating)
@@ -102,28 +115,39 @@ def hybrid_sentiment(text_sentiment, rating):
 
     return text_sentiment
 
-# ================== UI ==================
-st.title("🤖 Hybrid / Fusion Sentiment Analysis Tokopedia")
-st.caption("Menggabungkan Lexicon-based Sentiment + Rating + SVM")
+# ================== SIDEBAR ==================
+with st.sidebar:
+    st.header("📂 Input Data")
+    uploaded_file = st.file_uploader("Upload Dataset CSV", type=["csv"])
 
-uploaded_file = st.file_uploader("Upload CSV Tokopedia", type=["csv"])
+    st.divider()
+    st.header("🧠 Model")
+    train_btn = st.button("🚀 Latih Model SVM")
 
+# ================== MAIN PROCESS ==================
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # ================== FILTER KATEGORI ==================
-    if "category" in df.columns:
-        category = st.selectbox(
-            "Filter Kategori",
-            ["Semua"] + sorted(df["category"].dropna().unique().tolist())
-        )
-        if category != "Semua":
-            df = df[df["category"] == category]
+    st.subheader("⚙️ Pengaturan Data")
 
-    text_col = st.selectbox("Kolom Teks Ulasan", df.columns)
-    rating_col = st.selectbox("Kolom Rating", df.columns)
+    col_set1, col_set2, col_set3 = st.columns(3)
 
-    # ================== PREPROCESSING ==================
+    with col_set1:
+        text_col = st.selectbox("Kolom Ulasan", df.columns)
+
+    with col_set2:
+        rating_col = st.selectbox("Kolom Rating", df.columns)
+
+    with col_set3:
+        if "category" in df.columns:
+            category = st.selectbox(
+                "Kategori Produk",
+                ["Semua"] + sorted(df["category"].dropna().unique())
+            )
+            if category != "Semua":
+                df = df[df["category"] == category]
+
+    # ================== PREPROCESS ==================
     df["Cleaned_Text"] = df[text_col].astype(str).apply(clean_text)
     df["Lexicon_Sentiment"] = df["Cleaned_Text"].apply(lexicon_sentiment)
     df["Final_Sentiment"] = df.apply(
@@ -133,7 +157,7 @@ if uploaded_file:
 
     # ================== TABS ==================
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Dashboard Hybrid",
+        "📊 Dashboard",
         "🏆 Top Produk",
         "🔠 TF-IDF",
         "🧠 SVM & Evaluasi",
@@ -142,24 +166,34 @@ if uploaded_file:
 
     # ================== TAB 1 ==================
     with tab1:
+        st.subheader("📊 Ringkasan Hybrid Sentiment")
+
         c1, c2, c3 = st.columns(3)
         c1.metric("Total Ulasan", len(df))
-        c2.metric("Rata-rata Rating", f"{df[rating_col].mean():.2f}")
-        c3.metric(
-            "Sentimen Positif",
-            f"{(df['Final_Sentiment']=='Positif').mean()*100:.1f}%"
-        )
+        c2.metric("Rata-rata Rating", f"{df[rating_col].mean():.2f} ⭐")
+        c3.metric("Sentimen Positif",
+                  f"{(df['Final_Sentiment']=='Positif').mean()*100:.1f}%")
 
-        fig, ax = plt.subplots()
-        df["Final_Sentiment"].value_counts().plot.pie(
-            autopct="%1.1f%%", ax=ax
-        )
-        ax.set_ylabel("")
-        st.pyplot(fig)
+        st.divider()
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig, ax = plt.subplots()
+            df["Final_Sentiment"].value_counts().plot.pie(
+                autopct="%1.1f%%", ax=ax
+            )
+            ax.set_ylabel("")
+            st.pyplot(fig)
+
+        with col2:
+            ct = pd.crosstab(df[rating_col], df["Final_Sentiment"])
+            st.bar_chart(ct)
 
     # ================== TAB 2 ==================
     with tab2:
         if "product_name" in df.columns:
+            st.subheader("🏆 Produk Paling Banyak Diulas")
             top = df["product_name"].value_counts().head(10)
             st.bar_chart(top)
 
@@ -178,7 +212,7 @@ if uploaded_file:
 
     # ================== TAB 4 ==================
     with tab4:
-        if st.button("Latih Model SVM"):
+        if train_btn:
             X_train, X_test, y_train, y_test = train_test_split(
                 df["Cleaned_Text"],
                 df["Final_Sentiment"],
@@ -198,7 +232,7 @@ if uploaded_file:
             st.session_state["vectorizer"] = vectorizer
 
             acc = accuracy_score(y_test, y_pred)
-            st.success(f"Akurasi Model: {acc:.2%}")
+            st.success(f"🎯 Akurasi Model: {acc:.2%}")
 
             cm = confusion_matrix(
                 y_test, y_pred,
@@ -208,8 +242,8 @@ if uploaded_file:
             fig, ax = plt.subplots()
             sns.heatmap(
                 cm, annot=True, fmt="d",
-                xticklabels=["Neg","Neu","Pos"],
-                yticklabels=["Neg","Neu","Pos"]
+                xticklabels=["NEG","NEU","POS"],
+                yticklabels=["NEG","NEU","POS"]
             )
             st.pyplot(fig)
 
@@ -221,7 +255,10 @@ if uploaded_file:
 
     # ================== TAB 5 ==================
     with tab5:
-        user_text = st.text_area("Masukkan ulasan produk")
+        st.subheader("🔮 Prediksi Sentimen Manual")
+        user_text = st.text_area(
+            "Contoh: Barangnya bagus tapi pengirimannya lama"
+        )
 
         if st.button("Prediksi"):
             clean = clean_text(user_text)
@@ -236,5 +273,4 @@ if uploaded_file:
                 st.warning("Model SVM belum dilatih")
 
 else:
-    st.info("Upload file CSV untuk memulai analisis.")
-
+    st.info("Silakan upload dataset CSV untuk memulai analisis.")
