@@ -506,18 +506,4 @@ if uploaded_file:
                             'Recall': f"{cr[label]['recall']:.4f}",
                             'F1-Score': f"{cr[label]['f1-score']:.4f}",
                             'Support': int(cr[label]['support'])
-                        })
-                
-                metrics_df = pd.DataFrame(metrics_data)
-                st.dataframe(metrics_df, use_container_width=True, hide_index=True)
-                
-                # TF-IDF Top Features
-                st.subheader("Top 10 Fitur TF-IDF Paling Berpengaruh")
-                feature_names = vectorizer.get_feature_names_out()
-                tfidf_scores = X.toarray().mean(axis=0)
-                top_features = pd.DataFrame({
-                    'Fitur': feature_names,
-                    'Skor TF-IDF': tfidf_scores
-                }).sort_values('Skor TF-IDF', ascending=False).head(10)
-                
-                fig_tfi
+                        
