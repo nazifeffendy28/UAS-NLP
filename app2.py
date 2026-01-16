@@ -11,52 +11,62 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 
-# ================== PAGE CONFIG ==================
-st.set_page_config(
-    page_title="Hybrid Sentiment Analysis Tokopedia",
-    layout="wide"
-)
+# ================== KONFIGURASI HALAMAN ==================
+st.set_page_config(page_title="Analisis Sentimen Tokopedia", layout="wide")
 
-# ================== SLANG DICTIONARY ==================
+# ================== KAMUS SLANG ==================
 slang_dict = {
-    "ga": "tidak", "gak": "tidak", "tdk": "tidak",
-    "yg": "yang", "ak": "aku", "aq": "aku",
-    "bgt": "banget", "tp": "tapi",
-    "klo": "kalau", "ok": "oke",
-    "mantul": "mantap"
+    "yg": "yang", "ga": "tidak", "gak": "tidak", "tdk": "tidak", "engga": "tidak",
+    "brg": "barang", "sdh": "sudah", "dgn": "dengan", "thx": "terima kasih",
+    "tks": "terima kasih", "makasih": "terima kasih", "bgt": "banget",
+    "kalo": "kalau", "kl": "kalau", "tp": "tapi", "dr": "dari",
+    "bs": "bisa", "sy": "saya", "ak": "aku", "aq": "aku",
+    "mantul": "mantap betul", "mantap": "bagus", "jos": "bagus",
+    "ok": "oke", "oke": "bagus", "good": "bagus", "best": "bagus",
+    "jelek": "buruk", "parah": "buruk", "ancur": "buruk", "rusak": "buruk",
+    "dtg": "datang", "sampe": "sampai", "nyampe": "sampai", "cepet": "cepat",
+    "kirim": "pengiriman", "kurir": "pengiriman", "packing": "kemasan",
+    "seller": "penjual", "respon": "tanggapan", "bintang": "rating"
 }
 
-# ================== STOPWORDS ==================
-stopwords = {
-    "yang","dan","di","ke","dari","ini","itu","nya",
-    "aku","saya","untuk","dengan","ada","karena",
-    "tapi","jadi","sudah","masih","lagi","aja"
-}
-
-# ================== LEXICON ==================
 positive_words = {
-    "bagus","baik","cepat","rapi","aman","sesuai",
-    "mantap","puas","oke","keren","nyaman",
-    "suka","awet","murah","ramah","halus",
-    "lembut","tebal","asli","original"
+    "bagus","baik","cepat","rapi","aman","sesuai","mantap","puas","oke","keren",
+    "nyaman","suka","awet","murah","ramah","lengkap","halus","lembut","tebal",
+    "asli","original","recommended","top","memuaskan","pas","cocok","adem",
+    "modis","trendy"
 }
 
 negative_words = {
-    "jelek","buruk","lama","rusak","cacat",
-    "kecewa","salah","beda","tipis","kasar",
-    "kotor","mahal","bohong","palsu","robek",
-    "komplain","parah","nyesel","bau"
+    "jelek","buruk","lama","rusak","cacat","kecewa","salah","beda","tipis",
+    "kasar","kotor","mahal","bohong","palsu","robek","retur","komplain",
+    "parah","nyesel","panas","gerah","gatal","sempit","luntur","bau","kusut"
 }
 
+custom_stopwords = {
+    "yang","di","dan","itu","ini","dari","ke","untuk","dengan","nya",
+    "saya","aku","kami","kita","bisa","ada","adalah","juga","karena",
+    "tapi","atau","jadi","jika","kalau","sudah","lagi","akan"
+}
 # ================== PREPROCESSING ==================
-def clean_text(text):
+def preprocess_text(text):
     if not isinstance(text, str):
         return ""
+
+    # 1. Case Folding
     text = text.lower()
+
+    # 2. Cleaning (hapus angka & simbol)
     text = re.sub(r"[^a-z\s]", " ", text)
+
+    # Tokenisasi
     tokens = text.split()
+
+    # 3. Normalization (slang → baku)
     tokens = [slang_dict.get(t, t) for t in tokens]
+
+    # 4. Stopword Removal
     tokens = [t for t in tokens if t not in stopwords]
+
     return " ".join(tokens)
 
 # ================== LEXICON SENTIMENT ==================
@@ -71,54 +81,50 @@ def lexicon_sentiment(text):
         return "Positif"
     elif score < 0:
         return "Negatif"
-    else:
-        return "Netral"
+    return "Netral"
 
 # ================== HYBRID LABELING ==================
-def hybrid_label(text_sentiment, rating):
+def hybrid_label(sentiment, rating):
     try:
         rating = int(rating)
     except:
-        return text_sentiment
+        return sentiment
 
-    if text_sentiment == "Positif" and rating <= 3:
+    if sentiment == "Positif" and rating <= 3:
         return "Netral"
-    if text_sentiment == "Negatif" and rating >= 4:
+    if sentiment == "Negatif" and rating >= 4:
         return "Netral"
 
-    return text_sentiment
+    return sentiment
 
-# ================== RATING LABEL (GROUND TRUTH SVM) ==================
+# ================== LABEL UNTUK SVM ==================
 def rating_label(rating):
     try:
         rating = int(rating)
     except:
         return "Netral"
+
     if rating >= 4:
         return "Positif"
     elif rating <= 2:
         return "Negatif"
-    else:
-        return "Netral"
+    return "Netral"
 
 # ================== UI ==================
-st.title("Hybrid Sentiment Analysis Tokopedia")
-st.markdown("Metode Kuantitatif – Hybrid Lexicon + Rating & SVM")
+st.title("Analisis Sentimen Ulasan Tokopedia")
+st.markdown("Metode Kuantitatif – Hybrid Lexicon & SVM")
 
-uploaded_file = st.file_uploader("Upload CSV Tokopedia", type=["csv"])
+file = st.file_uploader("Upload dataset CSV Tokopedia", type=["csv"])
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+if file:
+    df = pd.read_csv(file)
 
-    st.subheader("Konfigurasi Kolom")
-    text_col = st.selectbox("Kolom Teks Ulasan", df.columns)
-    rating_col = st.selectbox("Kolom Rating", df.columns)
-    product_col = st.selectbox("Kolom Nama Produk", df.columns)
-    category_col = st.selectbox("Kolom Kategori", df.columns)
-    sold_col = st.selectbox("Kolom Terjual", df.columns)
+    text_col = st.selectbox("Kolom teks ulasan", df.columns)
+    rating_col = st.selectbox("Kolom rating", df.columns)
+    product_col = st.selectbox("Kolom nama produk", df.columns)
 
     # ================== PREPROCESSING ==================
-    df["clean_text"] = df[text_col].astype(str).apply(clean_text)
+    df["clean_text"] = df[text_col].astype(str).apply(preprocess_text)
 
     # ================== HYBRID LABEL ==================
     df["lexicon_sentiment"] = df["clean_text"].apply(lexicon_sentiment)
@@ -127,65 +133,46 @@ if uploaded_file:
         axis=1
     )
 
-    # ================== SVM LABEL ==================
+    # ================== LABEL SVM ==================
     df["svm_label"] = df[rating_col].apply(rating_label)
 
-    # ================== TABS ==================
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Dashboard",
-        "Top Produk",
-        "TF-IDF",
-        "SVM & Evaluasi",
-        "Prediksi Manual"
+    tab1, tab2, tab3 = st.tabs([
+        "Dashboard & Visualisasi",
+        "TF-IDF & Word",
+        "SVM & Evaluasi"
     ])
 
     # ================== DASHBOARD ==================
     with tab1:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Ulasan", len(df))
-        c2.metric("Rata-rata Rating", f"{df[rating_col].mean():.2f}")
-        c3.metric("Sentimen Positif",
-                  f"{(df['final_sentiment']=='Positif').mean()*100:.1f}%")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Ulasan", len(df))
+        col2.metric("Rata-rata Rating", f"{df[rating_col].mean():.2f}")
+        col3.metric("Sentimen Positif", f"{(df['final_sentiment']=='Positif').mean()*100:.1f}%")
 
         fig, ax = plt.subplots()
-        df["final_sentiment"].value_counts().plot.pie(
-            autopct="%1.1f%%", ax=ax
-        )
+        df["final_sentiment"].value_counts().plot.pie(autopct="%1.1f%%", ax=ax)
         ax.set_ylabel("")
         st.pyplot(fig)
 
-        wc = WordCloud(
-            width=900, height=400, background_color="white"
-        ).generate(" ".join(df["clean_text"]))
+        wc = WordCloud(width=900, height=400, background_color="white") \
+            .generate(" ".join(df["clean_text"]))
         fig, ax = plt.subplots()
         ax.imshow(wc)
         ax.axis("off")
         st.pyplot(fig)
 
-    # ================== TOP PRODUK ==================
-    with tab2:
-        st.subheader("Top Produk Terjual")
-        df[sold_col] = pd.to_numeric(df[sold_col], errors="coerce").fillna(0)
-        top_sold = df.groupby(product_col)[sold_col].sum().nlargest(10)
-
-        fig, ax = plt.subplots()
-        top_sold.sort_values().plot.barh(ax=ax)
-        st.pyplot(fig)
-
-        st.subheader("Top Produk Paling Banyak Diulas")
-        top_review = df[product_col].value_counts().head(10)
-        fig, ax = plt.subplots()
-        top_review.sort_values().plot.barh(ax=ax)
-        st.pyplot(fig)
+        st.dataframe(df[[product_col, rating_col, "final_sentiment"]].head(10))
 
     # ================== TF-IDF ==================
-    with tab3:
+    with tab2:
         tfidf = TfidfVectorizer(max_features=1000)
         tfidf_matrix = tfidf.fit_transform(df["clean_text"])
+
         tfidf_df = pd.DataFrame(
             tfidf_matrix.toarray(),
             columns=tfidf.get_feature_names_out()
         )
+
         top_words = tfidf_df.mean().sort_values(ascending=False).head(10)
 
         fig, ax = plt.subplots()
@@ -194,13 +181,13 @@ if uploaded_file:
 
         st.dataframe(top_words)
 
-    # ================== SVM ==================
-    with tab4:
+    # ================== SVM & EVALUASI ==================
+    with tab3:
         if st.button("Latih Model SVM"):
             X_train, X_test, y_train, y_test = train_test_split(
                 df["clean_text"],
                 df["svm_label"],
-                test_size=0.2,
+                test_size=0.2,   # 80:20
                 random_state=42
             )
 
@@ -208,12 +195,13 @@ if uploaded_file:
             X_train_vec = vectorizer.fit_transform(X_train)
             X_test_vec = vectorizer.transform(X_test)
 
-            svm = SVC(kernel="linear")
-            svm.fit(X_train_vec, y_train)
-            y_pred = svm.predict(X_test_vec)
+            model = SVC(kernel="linear")
+            model.fit(X_train_vec, y_train)
+
+            y_pred = model.predict(X_test_vec)
 
             acc = accuracy_score(y_test, y_pred)
-            st.metric("Akurasi Model", f"{acc*100:.2f}%")
+            st.metric("Akurasi", f"{acc*100:.2f}%")
 
             cm = confusion_matrix(
                 y_test, y_pred,
@@ -228,31 +216,8 @@ if uploaded_file:
             )
             st.pyplot(fig)
 
-            report = pd.DataFrame(
-                classification_report(
-                    y_test, y_pred, output_dict=True
-                )
-            ).transpose()
-            st.dataframe(report)
-
-            st.session_state["svm"] = svm
-            st.session_state["vectorizer"] = vectorizer
-
-    # ================== MANUAL PREDICTION ==================
-    with tab5:
-        user_text = st.text_area("Masukkan teks ulasan")
-        if st.button("Prediksi"):
-            clean = clean_text(user_text)
-            lex = lexicon_sentiment(clean)
-
-            if "svm" in st.session_state:
-                vec = st.session_state["vectorizer"].transform([clean])
-                svm_pred = st.session_state["svm"].predict(vec)[0]
-            else:
-                svm_pred = "Model belum dilatih"
-
-            st.write("Lexicon Sentiment:", lex)
-            st.write("SVM Prediction:", svm_pred)
+            report = classification_report(y_test, y_pred, output_dict=True)
+            st.dataframe(pd.DataFrame(report).transpose())
 
 else:
-    st.info("Upload dataset CSV Tokopedia terlebih dahulu")
+    st.info("Silakan upload dataset CSV terlebih dahulu")
