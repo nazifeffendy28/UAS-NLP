@@ -599,22 +599,10 @@ if uploaded_file:
 else:
     st.info("👈 Silakan upload file CSV dataset ulasan Tokopedia di sidebar untuk memulai analisis")
     
-    # Tampilkan contoh format dataset
-    st.subheader("📄 Format Dataset yang Diharapkan")
+    # Tampilkan informasi kelompok
+    st.subheader("👥 Nama Kelompok")
     st.markdown("""
-    Dataset CSV harus memiliki minimal 2 kolom:
-    1. **Kolom Ulasan/Review** - Berisi teks ulasan pelanggan
-    2. **Kolom Rating** - Berisi nilai rating (1-5)
-    
-    Contoh:
+    - **Shelly Ananda** (2411500891)
+    - **M. Richo Irsyad F.** (2411500958)
+    - **Nazif Hamza Effendy** (2411501527)
     """)
-    
-    example_data = pd.DataFrame({
-        'ulasan': [
-            'Barang bagus, cepat sampai, packing rapi',
-            'Mengecewakan, barang tidak sesuai deskripsi',
-            'Biasa saja, tidak ada yang istimewa'
-        ],
-        'rating': [5, 2, 3]
-    })
-    st.dataframe(example_data, use_container_width=True)
