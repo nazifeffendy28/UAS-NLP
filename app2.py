@@ -506,4 +506,115 @@ if uploaded_file:
                             'Recall': f"{cr[label]['recall']:.4f}",
                             'F1-Score': f"{cr[label]['f1-score']:.4f}",
                             'Support': int(cr[label]['support'])
+                        })
+                
+                metrics_df = pd.DataFrame(metrics_data)
+                st.dataframe(metrics_df, use_container_width=True, hide_index=True)
+                
+                # TF-IDF Top Features
+                st.subheader("Top 10 Fitur TF-IDF Paling Berpengaruh")
+                feature_names = vectorizer.get_feature_names_out()
+                tfidf_scores = X.toarray().mean(axis=0)
+                top_features = pd.DataFrame({
+                    'Fitur': feature_names,
+                    'Skor TF-IDF': tfidf_scores
+                }).sort_values('Skor TF-IDF', ascending=False).head(10)
+                
+                fig_tfidf, ax_tfidf = plt.subplots(figsize=(10, 6))
+                ax_tfidf.barh(top_features['Fitur'], top_features['Skor TF-IDF'], color='steelblue')
+                ax_tfidf.set_xlabel('Skor TF-IDF Rata-rata', fontsize=12)
+                ax_tfidf.set_ylabel('Fitur', fontsize=12)
+                ax_tfidf.set_title('Top 10 Fitur TF-IDF', fontsize=14, fontweight='bold')
+                ax_tfidf.invert_yaxis()
+                st.pyplot(fig_tfidf)
+    
+    # --- TAB 5: PREDIKSI BARU ---
+    with tab5:
+        st.subheader("🔮 Prediksi Sentimen Ulasan Baru")
+        
+        if 'svm_model' not in st.session_state:
+            st.warning("⚠️ Model belum dilatih! Silakan latih model di tab **Model SVM & Evaluasi** terlebih dahulu.")
+        else:
+            st.info("💡 Masukkan teks ulasan baru untuk memprediksi sentimennya")
+            
+            # Input ulasan baru
+            new_review = st.text_area("Masukkan ulasan:", 
+                                      placeholder="Contoh: Barang bagus banget, cepat sampai, packing rapi. Terima kasih!",
+                                      height=100)
+            
+            col_pred1, col_pred2 = st.columns([1, 3])
+            
+            with col_pred1:
+                predict_button = st.button("🚀 Prediksi Sentimen", type="primary", use_container_width=True)
+            
+            if predict_button and new_review:
+                with st.spinner("⏳ Memproses ulasan..."):
+                    # Preprocessing
+                    preprocessed = preprocess_text(new_review)
+                    
+                    # Transform dengan TF-IDF
+                    vectorizer = st.session_state['vectorizer']
+                    new_review_tfidf = vectorizer.transform([preprocessed])
+                    
+                    # Prediksi
+                    svm_model = st.session_state['svm_model']
+                    prediction = svm_model.predict(new_review_tfidf)[0]
+                    
+                    # Tampilkan hasil
+                    st.divider()
+                    st.subheader("Hasil Prediksi")
+                    
+                    col_res1, col_res2 = st.columns(2)
+                    
+                    with col_res1:
+                        st.write("**Teks Original:**")
+                        st.info(new_review)
                         
+                        st.write("**Teks Setelah Preprocessing:**")
+                        st.code(preprocessed)
+                    
+                    with col_res2:
+                        # Tampilkan prediksi dengan warna
+                        if prediction == 'Positif':
+                            st.success(f"### Sentimen: {prediction} 😊")
+                        elif prediction == 'Negatif':
+                            st.error(f"### Sentimen: {prediction} 😞")
+                        else:
+                            st.warning(f"### Sentimen: {prediction} 😐")
+                        
+                        # Tampilkan kata kunci yang terdeteksi
+                        words = set(preprocessed.split())
+                        pos_words = words.intersection(POSITIVE_WORDS)
+                        neg_words = words.intersection(NEGATIVE_WORDS)
+                        
+                        st.write("**Kata Kunci Terdeteksi:**")
+                        if pos_words:
+                            st.write(f"✅ Positif: {', '.join(list(pos_words)[:5])}")
+                        if neg_words:
+                            st.write(f"❌ Negatif: {', '.join(list(neg_words)[:5])}")
+            
+            elif predict_button and not new_review:
+                st.error("⚠️ Silakan masukkan teks ulasan terlebih dahulu!")
+
+else:
+    st.info("👈 Silakan upload file CSV dataset ulasan Tokopedia di sidebar untuk memulai analisis")
+    
+    # Tampilkan contoh format dataset
+    st.subheader("📄 Format Dataset yang Diharapkan")
+    st.markdown("""
+    Dataset CSV harus memiliki minimal 2 kolom:
+    1. **Kolom Ulasan/Review** - Berisi teks ulasan pelanggan
+    2. **Kolom Rating** - Berisi nilai rating (1-5)
+    
+    Contoh:
+    """)
+    
+    example_data = pd.DataFrame({
+        'ulasan': [
+            'Barang bagus, cepat sampai, packing rapi',
+            'Mengecewakan, barang tidak sesuai deskripsi',
+            'Biasa saja, tidak ada yang istimewa'
+        ],
+        'rating': [5, 2, 3]
+    })
+    st.dataframe(example_data, use_container_width=True)
