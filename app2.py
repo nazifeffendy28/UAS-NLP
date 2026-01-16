@@ -94,37 +94,83 @@ STOPWORDS = {
     "sesudah", "saat", "ketika", "sewaktu", "begitu", "seperti", "bagai",
     "ibarat", "umpama", "laksana", "seolah", "serupa", "macam", "secara",
     "setiap", "seluruh", "semua", "para", "sang", "si", "sri", "banget",
-    "sekali", "sangat", "very", "very", "nih", "deh", "dong", "kok",
+    "sekali", "sangat", "very", "nih", "deh", "dong", "kok",
     "sih", "lho", "kah", "pun"
 }
 
-# ================== FUNGSI PREPROCESSING (TAHAPAN SESUAI METODOLOGI) ==================
+# ================== FUNGSI PREPROCESSING BERTAHAP (SESUAI METODOLOGI) ==================
 def cleaning(text):
-    """Tahap 1 - Cleaning: menghapus tanda baca, angka, dan karakter non-alfanumerik"""
+    """
+    Tahap 1 - Cleaning: menghapus tanda baca, angka, dan karakter non-alfanumerik
+    Input: "Barang bagus!!! cepat sampai... thx 123"
+    Output: "Barang bagus cepat sampai thx"
+    """
     if not isinstance(text, str):
         return ""
+    # Menghapus karakter selain huruf dan spasi
     text = re.sub(r'[^a-zA-Z\s]', ' ', text)
+    # Menghapus spasi berlebih
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
 def case_folding(text):
-    """Tahap 2 - Case Folding: mengubah seluruh teks menjadi huruf kecil"""
+    """
+    Tahap 2 - Case Folding: mengubah seluruh teks menjadi huruf kecil
+    Input: "Barang BAGUS Cepat Sampai"
+    Output: "barang bagus cepat sampai"
+    """
     return text.lower()
 
 def normalization(text):
-    """Tahap 3 - Normalization: mengubah kata gaul/slang menjadi kata baku menggunakan kamus dictionary-based"""
+    """
+    Tahap 3 - Normalization: mengubah kata gaul/slang menjadi kata baku menggunakan kamus dictionary-based
+    Input: "brg bgus bgt, cpt sampe, thx"
+    Output: "barang bagus banget cepat sampai terima kasih"
+    """
     words = text.split()
     normalized = [NORMALIZATION_DICT.get(word, word) for word in words]
     return ' '.join(normalized)
 
 def stopword_removal(text):
-    """Tahap 4 - Stopword Removal: menghapus kata umum yang tidak memiliki makna sentimen"""
+    """
+    Tahap 4 - Stopword Removal: menghapus kata umum yang tidak memiliki makna sentimen
+    Input: "barang yang bagus banget dan cepat sampai"
+    Output: "barang bagus banget cepat sampai"
+    """
     words = text.split()
     filtered = [word for word in words if word not in STOPWORDS and len(word) > 2]
     return ' '.join(filtered)
 
+def preprocess_text_step_by_step(text):
+    """
+    Pipeline preprocessing BERTAHAP dengan menyimpan hasil setiap tahap
+    Return: dictionary berisi hasil setiap tahapan
+    """
+    original = str(text)
+    
+    # Tahap 1: Cleaning
+    step1_cleaning = cleaning(original)
+    
+    # Tahap 2: Case Folding
+    step2_case_folding = case_folding(step1_cleaning)
+    
+    # Tahap 3: Normalization
+    step3_normalization = normalization(step2_case_folding)
+    
+    # Tahap 4: Stopword Removal
+    step4_stopword_removal = stopword_removal(step3_normalization)
+    
+    return {
+        'original': original,
+        'step1_cleaning': step1_cleaning,
+        'step2_case_folding': step2_case_folding,
+        'step3_normalization': step3_normalization,
+        'step4_stopword_removal': step4_stopword_removal,
+        'final': step4_stopword_removal
+    }
+
 def preprocess_text(text):
-    """Pipeline preprocessing lengkap sesuai metodologi penelitian"""
+    """Pipeline preprocessing lengkap (untuk pemrosesan cepat)"""
     text = cleaning(text)
     text = case_folding(text)
     text = normalization(text)
@@ -165,322 +211,4 @@ def hybrid_labeling(row, rating_col):
         return lexicon_label
 
 # ================== UI UTAMA ==================
-st.title("📊 Analisis Sentimen Ulasan Tokopedia")
-st.markdown("""
-**Metode Penelitian:** Pendekatan Kuantitatif dengan Waterfall yang Dimodifikasi untuk Data Science  
-**Tahapan:** Pengumpulan Data → Preprocessing → Pelabelan Hybrid → Ekstraksi Fitur TF-IDF → Modeling SVM → Evaluasi & Visualisasi
-""")
-
-# --- SIDEBAR ---
-with st.sidebar:
-    st.header("📂 1. Upload Data")
-    uploaded_file = st.file_uploader("Upload file CSV ulasan Tokopedia", type=["csv"])
-    
-    st.divider()
-    st.header("⚙️ 2. Pengaturan Model")
-    st.info("**Split Data:** 80% Training, 20% Testing")
-    st.caption("Model: SVM dengan kernel Linear")
-
-if uploaded_file:
-    # ================== PENGUMPULAN DATA ==================
-    df = pd.read_csv(uploaded_file)
-    st.success(f"✅ Dataset berhasil dimuat: **{len(df)}** baris data")
-    
-    # Pilih kolom
-    st.subheader("Konfigurasi Kolom Dataset")
-    col1, col2 = st.columns(2)
-    with col1:
-        text_col = st.selectbox("Pilih Kolom Ulasan (Teks):", df.columns, index=0)
-    with col2:
-        rating_col = st.selectbox("Pilih Kolom Rating:", df.columns, index=1)
-    
-    # ================== PREPROCESSING DATA ==================
-    with st.spinner("⏳ Tahap Preprocessing Data (Cleaning → Case Folding → Normalization → Stopword Removal)..."):
-        df['text_preprocessed'] = df[text_col].astype(str).apply(preprocess_text)
-        
-        # ================== PELABELAN DATA (HYBRID APPROACH) ==================
-        df['sentiment'] = df.apply(lambda x: hybrid_labeling(x, rating_col), axis=1)
-    
-    st.success("✅ Preprocessing & Pelabelan Hybrid selesai!")
-    
-    # ================== TAB ANALISIS ==================
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📈 Distribusi Sentimen", 
-        "☁️ WordCloud", 
-        "📋 Tabel Interaktif", 
-        "🤖 Model SVM & Evaluasi",
-        "🔮 Prediksi Baru"
-    ])
-    
-    # --- TAB 1: DISTRIBUSI SENTIMEN ---
-    with tab1:
-        st.subheader("📊 Grafik Distribusi Sentimen")
-        
-        col_metric1, col_metric2, col_metric3 = st.columns(3)
-        col_metric1.metric("Total Ulasan", len(df))
-        col_metric2.metric("Rata-rata Rating", f"{df[rating_col].mean():.2f} ⭐")
-        sentiment_dist = df['sentiment'].value_counts()
-        col_metric3.metric("Sentimen Dominan", sentiment_dist.index[0])
-        
-        col_viz1, col_viz2 = st.columns(2)
-        
-        with col_viz1:
-            # Pie Chart
-            fig_pie, ax_pie = plt.subplots(figsize=(8, 6))
-            colors = ['#2ecc71', '#e74c3c', '#95a5a6']
-            sentiment_counts = df['sentiment'].value_counts()
-            ax_pie.pie(sentiment_counts, labels=sentiment_counts.index, autopct='%1.1f%%',
-                      startangle=90, colors=colors)
-            ax_pie.set_title('Proporsi Sentimen', fontsize=14, fontweight='bold')
-            st.pyplot(fig_pie)
-        
-        with col_viz2:
-            # Bar Chart
-            fig_bar, ax_bar = plt.subplots(figsize=(8, 6))
-            sns.countplot(data=df, x='sentiment', order=['Positif', 'Negatif', 'Netral'], 
-                         palette=colors, ax=ax_bar)
-            ax_bar.set_title('Distribusi Sentimen', fontsize=14, fontweight='bold')
-            ax_bar.set_xlabel('Sentimen', fontsize=12)
-            ax_bar.set_ylabel('Jumlah', fontsize=12)
-            for container in ax_bar.containers:
-                ax_bar.bar_label(container)
-            st.pyplot(fig_bar)
-        
-        # Sentimen per Rating
-        st.subheader("Sentimen Berdasarkan Rating")
-        fig_cross, ax_cross = plt.subplots(figsize=(10, 5))
-        ct = pd.crosstab(df[rating_col], df['sentiment'])
-        ct.plot(kind='bar', ax=ax_cross, color=colors)
-        ax_cross.set_title('Distribusi Sentimen per Rating', fontsize=14, fontweight='bold')
-        ax_cross.set_xlabel('Rating', fontsize=12)
-        ax_cross.set_ylabel('Jumlah', fontsize=12)
-        ax_cross.legend(title='Sentimen')
-        plt.xticks(rotation=0)
-        st.pyplot(fig_cross)
-    
-    # --- TAB 2: WORDCLOUD ---
-    with tab2:
-        st.subheader("☁️ WordCloud per Sentimen")
-        
-        sentiment_filter = st.selectbox("Pilih Sentimen:", ['Positif', 'Negatif', 'Netral'])
-        
-        filtered_text = ' '.join(df[df['sentiment'] == sentiment_filter]['text_preprocessed'])
-        
-        if filtered_text.strip():
-            colormap = 'RdYlGn' if sentiment_filter == 'Positif' else 'Reds' if sentiment_filter == 'Negatif' else 'Greys'
-            wc = WordCloud(width=1200, height=500, background_color='white',
-                          colormap=colormap, max_words=100).generate(filtered_text)
-            
-            fig_wc, ax_wc = plt.subplots(figsize=(14, 7))
-            ax_wc.imshow(wc, interpolation='bilinear')
-            ax_wc.axis('off')
-            ax_wc.set_title(f'WordCloud - Sentimen {sentiment_filter}', fontsize=16, fontweight='bold')
-            st.pyplot(fig_wc)
-        else:
-            st.warning(f"⚠️ Tidak ada data untuk sentimen {sentiment_filter}")
-    
-    # --- TAB 3: TABEL INTERAKTIF ---
-    with tab3:
-        st.subheader("📋 Tabel Interaktif Hasil Analisis")
-        
-        # Filter sentimen
-        sentiment_filter_table = st.multiselect(
-            "Filter Sentimen:", 
-            df['sentiment'].unique(), 
-            default=list(df['sentiment'].unique())
-        )
-        
-        display_df = df[df['sentiment'].isin(sentiment_filter_table)]
-        
-        # Kolom yang ditampilkan
-        display_cols = [text_col, 'text_preprocessed', rating_col, 'sentiment']
-        
-        # Tambahkan kolom opsional jika ada
-        optional_cols = ['nama_produk', 'product_name', 'kategori', 'category', 'jumlah_terjual', 'sold']
-        for col in optional_cols:
-            if col in df.columns and col not in display_cols:
-                display_cols.insert(0, col)
-        
-        st.dataframe(display_df[display_cols], use_container_width=True, height=400)
-        
-        # Download hasil
-        csv = display_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Hasil Analisis", csv, "hasil_analisis_sentimen.csv", "text/csv")
-    
-    # --- TAB 4: MODEL SVM & EVALUASI ---
-    with tab4:
-        st.subheader("🤖 Pemodelan dengan Support Vector Machine (SVM)")
-        st.markdown("""
-        **Ekstraksi Fitur:** TF-IDF (Term Frequency–Inverse Document Frequency)  
-        **Algoritma:** Support Vector Machine dengan kernel Linear  
-        **Split Data:** 80:20 (Training:Testing)  
-        **Evaluasi:** Confusion Matrix, Accuracy, Precision, Recall
-        """)
-        
-        if st.button("🚀 Latih Model SVM", type="primary"):
-            with st.spinner("⏳ Melatih model SVM dengan kernel Linear..."):
-                # ================== EKSTRAKSI FITUR TF-IDF ==================
-                vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1, 2))
-                X = vectorizer.fit_transform(df['text_preprocessed'])
-                y = df['sentiment']
-                
-                # ================== PEMBAGIAN DATA 80:20 ==================
-                X_train, X_test, y_train, y_test = train_test_split(
-                    X, y, test_size=0.2, random_state=42, stratify=y
-                )
-                
-                # ================== TRAINING SVM ==================
-                svm_model = SVC(kernel='linear', random_state=42)
-                svm_model.fit(X_train, y_train)
-                
-                # Prediksi
-                y_pred = svm_model.predict(X_test)
-                
-                # Simpan ke session state
-                st.session_state['svm_model'] = svm_model
-                st.session_state['vectorizer'] = vectorizer
-                
-                # ================== EVALUASI MODEL ==================
-                accuracy = accuracy_score(y_test, y_pred)
-                cm = confusion_matrix(y_test, y_pred, labels=['Positif', 'Negatif', 'Netral'])
-                cr = classification_report(y_test, y_pred, output_dict=True)
-                
-                st.success(f"✅ Model berhasil dilatih dengan **Accuracy: {accuracy:.4f}**")
-                
-                # Visualisasi Evaluasi
-                col_eval1, col_eval2 = st.columns(2)
-                
-                with col_eval1:
-                    st.subheader("Confusion Matrix")
-                    fig_cm, ax_cm = plt.subplots(figsize=(8, 6))
-                    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                               xticklabels=['Positif', 'Negatif', 'Netral'],
-                               yticklabels=['Positif', 'Negatif', 'Netral'], ax=ax_cm)
-                    ax_cm.set_xlabel('Predicted', fontsize=12)
-                    ax_cm.set_ylabel('Actual', fontsize=12)
-                    ax_cm.set_title('Confusion Matrix', fontsize=14, fontweight='bold')
-                    st.pyplot(fig_cm)
-                
-                with col_eval2:
-                    st.subheader("Classification Report")
-                    report_df = pd.DataFrame(cr).transpose()
-                    st.dataframe(report_df.style.format("{:.4f}"), use_container_width=True)
-                
-                # Metrik per kelas
-                st.subheader("Performa Model per Sentimen (Accuracy, Precision, Recall)")
-                metrics_data = []
-                for label in ['Positif', 'Negatif', 'Netral']:
-                    if label in cr:
-                        metrics_data.append({
-                            'Sentimen': label,
-                            'Precision': f"{cr[label]['precision']:.4f}",
-                            'Recall': f"{cr[label]['recall']:.4f}",
-                            'F1-Score': f"{cr[label]['f1-score']:.4f}",
-                            'Support': int(cr[label]['support'])
-                        })
-                
-                metrics_df = pd.DataFrame(metrics_data)
-                st.dataframe(metrics_df, use_container_width=True, hide_index=True)
-                
-                # TF-IDF Top Features
-                st.subheader("Top 10 Fitur TF-IDF Paling Berpengaruh")
-                feature_names = vectorizer.get_feature_names_out()
-                tfidf_scores = X.toarray().mean(axis=0)
-                top_features = pd.DataFrame({
-                    'Fitur': feature_names,
-                    'Skor TF-IDF': tfidf_scores
-                }).sort_values('Skor TF-IDF', ascending=False).head(10)
-                
-                fig_tfidf, ax_tfidf = plt.subplots(figsize=(10, 5))
-                sns.barplot(data=top_features, x='Skor TF-IDF', y='Fitur', 
-                           palette='viridis', ax=ax_tfidf)
-                ax_tfidf.set_title('Top 10 Fitur TF-IDF', fontsize=14, fontweight='bold')
-                st.pyplot(fig_tfidf)
-        
-        elif 'svm_model' in st.session_state:
-            st.info("✅ Model sudah tersimpan di memori. Anda dapat langsung melakukan prediksi di tab **Prediksi Baru**.")
-        else:
-            st.warning("⚠️ Klik tombol 'Latih Model SVM' untuk memulai training.")
-    
-    # --- TAB 5: PREDIKSI BARU ---
-    with tab5:
-        st.subheader("🔮 Prediksi Sentimen Ulasan Baru")
-        
-        user_input = st.text_area("Masukkan teks ulasan produk:", height=150,
-                                  placeholder="Contoh: Barang bagus banget, pengiriman cepat, packing rapi. Recommended!")
-        
-        if st.button("🔍 Prediksi Sentimen") and user_input:
-            # Preprocessing input
-            clean_input = preprocess_text(user_input)
-            
-            # Prediksi Lexicon
-            lexicon_pred = lexicon_sentiment(clean_input)
-            
-            col_res1, col_res2 = st.columns(2)
-            
-            with col_res1:
-                st.info(f"**Metode Lexicon-Based:** {lexicon_pred}")
-                st.caption("Prediksi berdasarkan kamus kata positif/negatif")
-            
-            # Prediksi SVM
-            with col_res2:
-                if 'svm_model' in st.session_state:
-                    vec_input = st.session_state['vectorizer'].transform([clean_input])
-                    svm_pred = st.session_state['svm_model'].predict(vec_input)[0]
-                    st.success(f"**Metode SVM (Machine Learning):** {svm_pred}")
-                    st.caption("Prediksi menggunakan model SVM terlatih")
-                else:
-                    st.warning("**Metode SVM:** Model belum dilatih")
-                    st.caption("Latih model di tab 'Model SVM & Evaluasi' terlebih dahulu")
-            
-            # Tampilkan hasil preprocessing
-            with st.expander("Lihat Detail Preprocessing"):
-                st.write("**Teks Asli:**")
-                st.write(user_input)
-                st.write("**Teks Setelah Preprocessing:**")
-                st.write(clean_input)
-                
-                # Detail tahapan
-                st.markdown("**Tahapan Preprocessing:**")
-                step1 = cleaning(user_input)
-                st.write(f"1. Cleaning: `{step1}`")
-                step2 = case_folding(step1)
-                st.write(f"2. Case Folding: `{step2}`")
-                step3 = normalization(step2)
-                st.write(f"3. Normalization: `{step3}`")
-                step4 = stopword_removal(step3)
-                st.write(f"4. Stopword Removal: `{step4}`")
-
-else:
-    st.info("📂 Silakan upload file CSV untuk memulai analisis")
-    st.markdown("""
-    ### 📋 Format CSV yang Dibutuhkan
-    
-    **Kolom Wajib:**
-    - Kolom teks ulasan (contoh: `ulasan`, `review`, `text`)
-    - Kolom rating (contoh: `rating`, `bintang`) dengan nilai 1-5
-    
-    **Kolom Opsional:**
-    - `nama_produk` / `product_name`: nama produk yang diulas
-    - `kategori` / `category`: kategori produk
-    - `jumlah_terjual` / `sold`: jumlah produk yang terjual
-    
-    ### 📝 Contoh Struktur Data
-```csv
-ulasan,rating,nama_produk,kategori,jumlah_terjual
-"Barang bagus sekali, pengiriman cepat",5,"Kaos Polos Premium","fashion",1234
-"Kecewa dengan kualitas, tidak sesuai gambar",2,"Sepatu Olahraga","olahraga",567
-"Produk oke, sesuai harga",4,"Powerbank 10000mAh","elektronik",890
-```
-    
-    ### 🔬 Metodologi Penelitian
-    Sistem ini menggunakan pendekatan **kuantitatif** dengan tahapan **Waterfall yang dimodifikasi untuk Data Science**:
-    
-    1. **Pengumpulan Data**: Upload dataset CSV
-    2. **Preprocessing Data**: Cleaning → Case Folding → Normalization → Stopword Removal
-    3. **Pelabelan Data**: Hybrid Approach (Lexicon-based + Rating Validation)
-    4. **Ekstraksi Fitur**: TF-IDF (Term Frequency–Inverse Document Frequency)
-    5. **Pemodelan**: SVM dengan kernel Linear (Split 80:20)
-    6. **Evaluasi**: Confusion Matrix, Accuracy, Precision, Recall
-    7. **Visualisasi**: GUI berbasis Streamlit dengan grafik, WordCloud, dan tabel interaktif
-    """)
+st.title("
