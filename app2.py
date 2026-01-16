@@ -191,12 +191,12 @@ def lexicon_sentiment(text):
     else:
         return 'Netral'
 
-def hybrid_labeling(row, rating_col):
+def hybrid_labeling(text_preprocessed, rating):
     """Validasi silang dengan rating untuk koreksi label (Hybrid Approach)"""
-    lexicon_label = lexicon_sentiment(row['text_preprocessed'])
+    lexicon_label = lexicon_sentiment(text_preprocessed)
     
     try:
-        rating = float(row[rating_col])
+        rating = float(rating)
     except:
         return lexicon_label
     
@@ -209,6 +209,25 @@ def hybrid_labeling(row, rating_col):
         return 'Netral'
     else:
         return lexicon_label
+
+# ================== FUNGSI DETEKSI KOLOM RATING ==================
+def detect_rating_column(df):
+    """Deteksi otomatis kolom rating dari DataFrame"""
+    # Kandidat nama kolom rating
+    rating_candidates = ['rating', 'bintang', 'star', 'rate', 'nilai', 'score']
+    
+    # Cek apakah ada kolom dengan nama yang sesuai
+    for col in df.columns:
+        if col.lower() in rating_candidates:
+            return col
+    
+    # Jika tidak ditemukan, cari kolom numerik dengan nilai 1-5
+    for col in df.columns:
+        if df[col].dtype in ['int64', 'float64']:
+            if df[col].min() >= 1 and df[col].max() <= 5:
+                return col
+    
+    return None
 
 # ================== UI UTAMA ==================
 st.title("📊 Analisis Sentimen Ulasan Tokopedia")
@@ -232,13 +251,18 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     st.success(f"✅ Dataset berhasil dimuat: **{len(df)}** baris data")
     
-    # Pilih kolom
+    # Deteksi kolom rating otomatis
+    rating_col = detect_rating_column(df)
+    
+    if rating_col is None:
+        st.error("⚠️ Kolom 'rating' tidak ditemukan! Pastikan dataset memiliki kolom rating dengan nilai 1-5")
+        st.stop()
+    else:
+        st.info(f"✅ Kolom rating terdeteksi: **{rating_col}**")
+    
+    # Pilih kolom teks
     st.subheader("Konfigurasi Kolom Dataset")
-    col1, col2 = st.columns(2)
-    with col1:
-        text_col = st.selectbox("Pilih Kolom Ulasan (Teks):", df.columns, index=0)
-    with col2:
-        rating_col = st.selectbox("Pilih Kolom Rating:", df.columns, index=1)
+    text_col = st.selectbox("Pilih Kolom Ulasan (Teks):", df.columns, index=0)
     
     # ================== PREPROCESSING DATA BERTAHAP ==================
     st.subheader("📝 Tahap Preprocessing Data")
@@ -293,7 +317,7 @@ if uploaded_file:
         df['text_preprocessed'] = df['step4_stopword_removal']
         
         # ================== PELABELAN DATA (HYBRID APPROACH) ==================
-        df['sentiment'] = df.apply(lambda x: hybrid_labeling(x, rating_col), axis=1)
+        df['sentiment'] = df.apply(lambda row: hybrid_labeling(row['text_preprocessed'], row[rating_col]), axis=1)
     
     st.success("✅ Preprocessing & Pelabelan Hybrid selesai!")
     
@@ -496,48 +520,4 @@ if uploaded_file:
                     'Skor TF-IDF': tfidf_scores
                 }).sort_values('Skor TF-IDF', ascending=False).head(10)
                 
-                fig_tfidf, ax_tfidf = plt.subplots(figsize=(10, 5))
-                sns.barplot(data=top_features, x='Skor TF-IDF', y='Fitur', 
-                           palette='viridis', ax=ax_tfidf)
-                ax_tfidf.set_title('Top 10 Fitur TF-IDF', fontsize=14, fontweight='bold')
-                st.pyplot(fig_tfidf)
-        
-        elif 'svm_model' in st.session_state:
-            st.info("✅ Model sudah tersimpan di memori. Anda dapat langsung melakukan prediksi di tab **Prediksi Baru**.")
-        else:
-            st.warning("⚠️ Klik tombol 'Latih Model SVM' untuk memulai training.")
-    
-    # --- TAB 5: PREDIKSI BARU ---
-    with tab5:
-        st.subheader("🔮 Prediksi Sentimen Ulasan Baru")
-        
-        user_input = st.text_area("Masukkan teks ulasan produk Tokopedia:", height=150)
-
-        if st.button("Prediksi Sentimen"):
-            if not user_input.strip():
-                st.warning("⚠️ Teks ulasan tidak boleh kosong.")
-            elif 'svm_model' not in st.session_state:
-                st.warning("⚠️ Model SVM belum dilatih. Silakan latih model terlebih dahulu.")
-            else:
-                # Preprocessing input
-                processed_input = preprocess_text(user_input)
-
-                # Prediksi SVM
-                vectorizer = st.session_state['vectorizer']
-                svm_model = st.session_state['svm_model']
-
-                input_vec = vectorizer.transform([processed_input])
-                prediction = svm_model.predict(input_vec)[0]
-
-                # Prediksi Lexicon (opsional ditampilkan)
-                lex_pred = lexicon_sentiment(processed_input)
-
-                col_p1, col_p2 = st.columns(2)
-                col_p1.success(f"🧠 Prediksi SVM: **{prediction}**")
-                col_p2.info(f"📘 Prediksi Lexicon: **{lex_pred}**")
-
-                st.markdown("### Hasil Preprocessing")
-                st.code(processed_input, language=None)
-
-else:
-    st.info("📂 Silakan upload file CSV untuk memulai analisis sentimen.")
+                fig_tfi
