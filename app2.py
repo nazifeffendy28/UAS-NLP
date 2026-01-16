@@ -192,12 +192,16 @@ if uploaded_file:
             st.bar_chart(ct)
             
         st.subheader("WordCloud Global")
-        all_text = " ".join(df['Cleaned_Text'])
-        wc = WordCloud(width=800, height=300, background_color='white').generate(all_text)
-        fig_wc, ax_wc = plt.subplots()
-        ax_wc.imshow(wc, interpolation='bilinear')
-        ax_wc.axis('off')
-        st.pyplot(fig_wc)
+        all_text = " ".join(df['Cleaned_Text'])# Validasi: Hanya buat WordCloud jika ada teks
+        if all_text.strip():
+            wc = WordCloud(width=800, height=300, background_color='white').generate(all_text)
+            fig_wc, ax_wc = plt.subplots()
+            ax_wc.imshow(wc, interpolation='bilinear')
+            ax_wc.axis('off')
+            st.pyplot(fig_wc)
+        else:
+            st.warning("⚠️ Tidak ada teks yang cukup untuk membuat WordCloud.")
+            st.pyplot(fig_wc)
 
     # --- TAB 2: TOP PRODUK (BUSINESS INTELLIGENCE) ---
     with tab2:
@@ -239,6 +243,7 @@ if uploaded_file:
             dense = tfidf_matrix.todense()
             denselist = dense.tolist()
             df_tfidf = pd.DataFrame(denselist, columns=feature_names)
+            sns.barplot(x=top_words.values, y=top_words.index, ax=ax_tfidf, hue=top_words.index, palette="viridis", legend=False)
             top_words = df_tfidf.mean().sort_values(ascending=False).head(10)
             
             fig_tfidf, ax_tfidf = plt.subplots(figsize=(10, 5))
@@ -331,4 +336,5 @@ if uploaded_file:
                 col_res2.success(f"**Metode SVM:** {svm_pred}")
 
 else:
+
     st.info("Silakan upload file CSV untuk memulai analisis.")
