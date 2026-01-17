@@ -787,27 +787,14 @@ if uploaded_file:
                 st.error("⚠️ Silakan masukkan teks ulasan terlebih dahulu!")
 
 else:
-    st.info("👈 Silakan upload file CSV dataset ulasan Tokopedia di sidebar untuk memulai analisis")
+    st.info("👈 upload file CSV dataset ulasan Tokopedia di sidebar untuk memulai analisis")
     
     st.subheader("👥 Informasi Kelompok")
     st.markdown("""
     - **Shelly Ananda** (2411500891)
     - **M. Richo Irsyad F.** (2411500958)
     - **Nazif Hamza Effendy** (2411501527)
+     """)
+  
     
-    ---
     
-    **🎯 Novelty Penelitian:**
-    
-    1. **Sistem Validasi Hybrid yang Ditingkatkan**
-       - Integrasi Lexicon-Based Scoring dengan Rating-Weighted Correction
-       - Deteksi otomatis sarkasme dan salah input rating
-       - Confidence scoring untuk setiap prediksi
-    
-    2. **Analisis Top Products untuk Business Intelligence**
-       - Identifikasi produk terbanyak diulas
-       - Produk dengan rating tertinggi
-       - Produk dengan sentimen positif terbanyak
-       - Produk terlaris (jika data tersedia)
-       - Distribusi sentimen per produk
-    """)
