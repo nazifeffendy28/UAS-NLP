@@ -767,11 +767,11 @@ if uploaded_file:
                     
                     with col_res2:
                         if prediction == 'Positif':
-                            st.success(f"### Sentimen: {prediction} 😊")
+                            st.success(f"### Sentimen: {prediction}")
                         elif prediction == 'Negatif':
-                            st.error(f"### Sentimen: {prediction} 😞")
+                            st.error(f"### Sentimen: {prediction}")
                         else:
-                            st.warning(f"### Sentimen: {prediction} 😐")
+                            st.warning(f"### Sentimen: {prediction}")
                         
                         words = set(preprocessed.split())
                         pos_words = words.intersection(POSITIVE_WORDS)
@@ -789,7 +789,7 @@ if uploaded_file:
 else:
     st.info("👈 upload file CSV dataset ulasan Tokopedia di sidebar untuk memulai analisis")
     
-    st.subheader("👥 Informasi Kelompok")
+    st.subheader("👥 Anggota Kelompok")
     st.markdown("""
     - **Shelly Ananda** (2411500891)
     - **M. Richo Irsyad F.** (2411500958)
@@ -798,3 +798,4 @@ else:
   
     
     
+
