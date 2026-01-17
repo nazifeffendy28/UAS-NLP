@@ -767,11 +767,11 @@ if uploaded_file:
                     
                     with col_res2:
                         if prediction == 'Positif':
-                            st.success(f"### Sentimen: {prediction} 😊")
+                            st.success(f"### Sentimen: {prediction} ")
                         elif prediction == 'Negatif':
-                            st.error(f"### Sentimen: {prediction} 😞")
+                            st.error(f"### Sentimen: {prediction} ")
                         else:
-                            st.warning(f"### Sentimen: {prediction} 😐")
+                            st.warning(f"### Sentimen: {prediction} ")
                         
                         words = set(preprocessed.split())
                         pos_words = words.intersection(POSITIVE_WORDS)
@@ -797,17 +797,4 @@ else:
     
     ---
     
-    **🎯 Novelty Penelitian:**
-    
-    1. **Sistem Validasi Hybrid yang Ditingkatkan**
-       - Integrasi Lexicon-Based Scoring dengan Rating-Weighted Correction
-       - Deteksi otomatis sarkasme dan salah input rating
-       - Confidence scoring untuk setiap prediksi
-    
-    2. **Analisis Top Products untuk Business Intelligence**
-       - Identifikasi produk terbanyak diulas
-       - Produk dengan rating tertinggi
-       - Produk dengan sentimen positif terbanyak
-       - Produk terlaris (jika data tersedia)
-       - Distribusi sentimen per produk
-    """)
+   
