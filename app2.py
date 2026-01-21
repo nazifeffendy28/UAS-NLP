@@ -540,7 +540,7 @@ if uploaded_file:
             tab_p1, tab_p2, tab_p3, tab_p4, tab_p5 = st.tabs([
                 "📊 Terbanyak Diulas",
                 "⭐ Rating Tertinggi", 
-                "😊 Sentimen Positif",
+                "Sentimen Positif",
                 "🛒 Terlaris",
                 "📈 Distribusi Sentimen"
             ])
@@ -798,4 +798,5 @@ else:
   
     
     
+
 
